@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Trade - P2P Escrow</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      .nav-links {
+        margin: 20px 0;
+      }
+      .nav-links a {
+        color: #007bff;
+        text-decoration: none;
+      }
+      .nav-links a:hover {
+        text-decoration: underline;
+      }
+      form {
+        background: #f9f9f9;
+        padding: 20px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+      button {
+        padding: 12px 30px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      #result {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Create a Trade</h1>
+
+    <div class="nav-links">
+      <a href="index.html">← Back to Trades List</a>
+      <span id="user-info" style="float: right; color: #666"></span>
+    </div>
+
+    <form id="create-trade-form">
+      <div class="form-group">
+        <label for="asset">Asset:</label>
+        <select id="asset" name="asset" required>
+          <option value="">Select asset...</option>
+          <option value="BTC">Bitcoin (BTC)</option>
+          <option value="ETH">Ethereum (ETH)</option>
+          <option value="USDT">Tether (USDT)</option>
+          <option value="BNB">Binance Coin (BNB)</option>
+          <option value="SOL">Solana (SOL)</option>
+          <option value="ADA">Cardano (ADA)</option>
+          <option value="XRP">Ripple (XRP)</option>
+          <option value="DOT">Polkadot (DOT)</option>
+          <option value="DOGE">Dogecoin (DOGE)</option>
+          <option value="LTC">Litecoin (LTC)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="amount">Amount:</label>
+        <input
+          type="number"
+          id="amount"
+          name="amount"
+          step="0.01"
+          required
+          placeholder="e.g., 0.5"
+        />
+      </div>
+
+      <button type="submit" id="submit-btn">Create Trade</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+      const API_BASE = "http://localhost:8000";
+      const form = document.getElementById("create-trade-form");
+      const result = document.getElementById("result");
+      const submitBtn = document.getElementById("submit-btn");
+
+      // Check if user is logged in
+      const userId = localStorage.getItem("user_id");
+      const username = localStorage.getItem("username");
+
+      if (!userId) {
+        window.location.href = "login.html";
+      }
+
+      // Display user info
+      const userInfo = document.getElementById("user-info");
+      if (userInfo && username) {
+        userInfo.innerHTML = `Logged in as: <strong>${username}</strong>`;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        // Get form data
+        const formData = new FormData(form);
+        const data = {
+          seller_id: parseInt(userId), // Use logged-in user ID
+          asset: formData.get("asset"),
+          amount: parseFloat(formData.get("amount")),
+        };
+
+        // Validate
+        if (!data.seller_id || !data.asset || !data.amount) {
+          showResult("Please fill in all fields", "error");
+          return;
+        }
+
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Creating...";
+        result.innerHTML = "";
+
+        try {
+          const response = await fetch(`${API_BASE}/trades`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          });
+
+          const responseData = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              responseData.error || `HTTP error! status: ${response.status}`
+            );
+          }
+
+          showResult(
+            `Trade created successfully! Trade ID: ${responseData.id}. <a href="trade.html?trade=${responseData.id}">View Trade</a>`,
+            "success"
+          );
+
+          // Reset form
+          form.reset();
+        } catch (error) {
+          console.error("Error creating trade:", error);
+          showResult(`Error: ${error.message}`, "error");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Create Trade";
+        }
+      });
+
+      function showResult(message, type) {
+        result.innerHTML = message;
+        result.className = type;
+        result.style.display = "block";
+      }
+    </script>
+  </body>
+</html>

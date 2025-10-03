@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P Escrow - Trades</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .nav-links {
+      margin: 20px 0;
+    }
+    .nav-links a {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      margin-right: 10px;
+    }
+    .nav-links a:hover {
+      background: #0056b3;
+    }
+    #trade-list {
+      margin-top: 20px;
+    }
+    .trade-item {
+      padding: 15px;
+      border: 1px solid #ccc;
+      margin: 10px 0;
+      border-radius: 5px;
+      background: #f9f9f9;
+    }
+    .trade-item a {
+      color: #007bff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .trade-item a:hover {
+      text-decoration: underline;
+    }
+    .status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status.open { background: #28a745; color: white; }
+    .status.in_progress { background: #ffc107; color: black; }
+    .status.completed { background: #6c757d; color: white; }
+    .status.cancelled { background: #dc3545; color: white; }
+    .error {
+      color: red;
+      padding: 10px;
+      background: #fee;
+      border-radius: 5px;
+    }
+    .loading {
+      color: #666;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>P2P Escrow Trades</h1>
+  
+  <div class="nav-links">
+    <a href="create_trade.html">Create a Trade</a>
+    <a href="#" onclick="loadTrades(); return false;">Refresh</a>
+    <span id="user-info" style="float: right; color: #666;"></span>
+  </div>
+
+  <div id="trade-list">
+    <p class="loading">Loading trades...</p>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8000';
+
+    // Check if user is logged in
+    const userId = localStorage.getItem('user_id');
+    const username = localStorage.getItem('username');
+
+    if (!userId) {
+      // Redirect to login if not logged in
+      window.location.href = 'login.html';
+    }
+
+    // Display user info
+    const userInfo = document.getElementById('user-info');
+    if (userInfo && username) {
+      userInfo.innerHTML = `
+        Logged in as: <strong>${username}</strong> (ID: ${userId}) | 
+        <a href="#" onclick="logout(); return false;">Logout</a>
+      `;
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('username');
+        window.location.href = 'login.html';
+      }
+    }
+
+    async function loadTrades() {
+      const container = document.getElementById('trade-list');
+      container.innerHTML = '<p class="loading">Loading trades...</p>';
+      
+      try {
+        const response = await fetch(`${API_BASE}/trades`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const trades = await response.json();
+        
+        if (trades.length === 0) {
+          container.innerHTML = '<p>No trades found. <a href="create_trade.html">Create one now!</a></p>';
+          return;
+        }
+        
+        container.innerHTML = trades.map(trade => `
+          <div class="trade-item">
+            <div>
+              <a href="trade.html?trade=${trade.id}">Trade #${trade.id}</a>
+              <span class="status ${trade.status}">${trade.status.toUpperCase()}</span>
+            </div>
+            <div style="margin-top: 8px;">
+              <strong>${trade.asset}:</strong> ${trade.amount} | 
+              <strong>Seller:</strong> ${trade.seller_name} | 
+              <strong>Buyer:</strong> ${trade.buyer_name || 'None'}
+            </div>
+          </div>
+        `).join('');
+        
+      } catch (error) {
+        console.error('Error loading trades:', error);
+        container.innerHTML = `
+          <div class="error">
+            <strong>Error loading trades:</strong> ${error.message}
+            <br><br>
+            Make sure your backend server is running on ${API_BASE}
+          </div>
+        `;
+      }
+    }
+    
+    // Load trades when page loads
+    loadTrades();
+    
+    // Optional: Auto-refresh every 5 seconds
+    // setInterval(loadTrades, 5000);
+  </script>
+</body>
+</html>
