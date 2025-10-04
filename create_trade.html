@@ -184,6 +184,10 @@
             );
           }
 
+          if (responseData.error) {
+            throw new Error(responseData.error);
+          }
+
           showResult(
             `Trade created successfully! Trade ID: ${responseData.id}. <a href="trade.html?trade=${responseData.id}">View Trade</a>`,
             "success"

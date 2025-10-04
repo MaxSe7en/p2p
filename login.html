@@ -177,10 +177,12 @@
         }
 
         showMessage('Login successful! Redirecting...', 'success');
-        
+        console.log('Login data:', data);
+        const {data: userData} = data;
         // Save user data to localStorage
-        localStorage.setItem('user_id', data.user.id);
-        localStorage.setItem('username', data.user.username);
+        localStorage.setItem('user_id', userData.id);
+        localStorage.setItem('username', userData.username);
+        localStorage.setItem('wallets', JSON.stringify(userData.wallets));
 
         // Redirect after 1 second
         setTimeout(() => {

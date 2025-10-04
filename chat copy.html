@@ -42,6 +42,30 @@
         background: #fff3cd;
         color: #856404;
       }
+      .user-input {
+        margin: 15px 0;
+        padding: 15px;
+        background: #f9f9f9;
+        border-radius: 5px;
+      }
+      .user-input input {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        width: 100px;
+        margin-right: 10px;
+      }
+      .user-input button {
+        padding: 8px 15px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .user-input button:hover {
+        background: #0056b3;
+      }
       #chat-box {
         border: 1px solid #ccc;
         height: 400px;
@@ -120,19 +144,30 @@
     <h1>Trade Chat</h1>
 
     <div class="nav-links">
-      <a href="#" onclick="goBackToTrade(); return false;">← Back to Trade Details</a>
-      <span id="user-info" style="float: right; color: #666;"></span>
+      <a href="#" onclick="goBackToTrade(); return false;"
+        >← Back to Trade Details</a
+      >
     </div>
 
-    <div id="connection-status" class="connection-status connecting">
-      Connecting...
+    <div id="connection-status" class="connection-status disconnected">
+      Disconnected
+    </div>
+
+    <div class="user-input" id="user-input-section">
+      <label
+        >Your User ID:
+        <input type="number" id="user_id" placeholder="Enter ID" min="1" />
+      </label>
+      <button onclick="joinChat()" id="join-btn">Join Chat</button>
     </div>
 
     <div id="chat-box">
-      <div class="system-message">Connecting to chat...</div>
+      <div class="system-message">
+        Enter your User ID and click "Join Chat" to start
+      </div>
     </div>
 
-    <form id="chat-form">
+    <form id="chat-form" style="display: none">
       <input
         type="text"
         id="message"
@@ -145,13 +180,11 @@
 
     <script>
       const WS_URL = "ws://localhost:8080";
-      const API_BASE = "http://localhost:8000";
       const urlParams = new URLSearchParams(window.location.search);
       const tradeId = urlParams.get("trade");
 
       let ws = null;
       let userId = null;
-      let username = null;
       let isJoined = false;
 
       const chatBox = document.getElementById("chat-box");
@@ -159,20 +192,6 @@
       const input = document.getElementById("message");
       const statusDiv = document.getElementById("connection-status");
       const submitBtn = form.querySelector('button[type="submit"]');
-
-      // Check if user is logged in
-      userId = localStorage.getItem('user_id');
-      username = localStorage.getItem('username');
-
-      if (!userId) {
-        window.location.href = 'login.html';
-      }
-
-      // Display user info
-      const userInfo = document.getElementById('user-info');
-      if (userInfo && username) {
-        userInfo.innerHTML = `Logged in as: <strong>${username}</strong>`;
-      }
 
       if (!tradeId) {
         document.body.innerHTML =
@@ -190,11 +209,8 @@
         ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
-          updateStatus("connected", "Connected - Joining chat...");
+          updateStatus("connected", "Connected to chat server");
           console.log("WebSocket connected");
-          
-          // Auto-join chat room
-          joinChat();
         };
 
         ws.onmessage = (event) => {
@@ -229,20 +245,39 @@
       }
 
       function joinChat() {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-          console.error("WebSocket not ready");
+        const userIdInput = document.getElementById("user_id");
+        userId = parseInt(userIdInput.value);
+
+        if (!userId || userId < 1) {
+          alert("Please enter a valid User ID");
+          userIdInput.focus();
           return;
         }
 
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          connectWebSocket();
+          // Wait for connection then join
+          const checkConnection = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              clearInterval(checkConnection);
+              sendJoinMessage();
+            }
+          }, 100);
+        } else {
+          sendJoinMessage();
+        }
+      }
+
+      function sendJoinMessage() {
         ws.send(
           JSON.stringify({
             action: "join",
             trade_id: parseInt(tradeId),
-            sender_id: parseInt(userId),
+            sender_id: userId,
           })
         );
 
-        console.log(`Joining chat for Trade #${tradeId} as user ${userId}`);
+        addSystemMessage(`Joining chat for Trade #${tradeId}...`);
       }
 
       function handleMessage(data) {
@@ -254,11 +289,8 @@
           input.disabled = false;
           submitBtn.disabled = false;
           input.focus();
-          updateStatus("connected", `Connected to Trade #${tradeId} chat`);
+          document.getElementById("user-input-section").style.display = "none";
           addSystemMessage(`You joined the chat for Trade #${tradeId}`);
-          
-          // Load previous messages
-          loadPreviousMessages();
           return;
         }
 
@@ -342,25 +374,19 @@
       async function loadPreviousMessages() {
         try {
           const response = await fetch(
-            `${API_BASE}/trades/${tradeId}/messages`
+            `http://localhost:8000/trades/${tradeId}/messages`
           );
-          
-          if (!response.ok) {
-            console.log("No previous messages endpoint available");
-            return;
-          }
+          if (!response.ok) return;
 
           const messages = await response.json();
+          chatBox.innerHTML = ""; // Clear system message
 
           if (messages.length === 0) {
             addSystemMessage("No previous messages");
           } else {
-            // Clear system messages
-            chatBox.innerHTML = "";
-            
             messages.forEach((msg) => {
-              const isMe = msg.sender_id == userId;
-              addMessage(msg.sender_name, msg.message, msg.created_at, isMe);
+              const isMe = msg.sender_name === userId; // This won't work perfectly, but it's a start
+              addMessage(msg.sender_name, msg.message, msg.created_at, false);
             });
           }
         } catch (error) {

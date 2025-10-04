@@ -29,6 +29,12 @@
     .nav-links a:hover {
       background: #0056b3;
     }
+    .nav-links a.chat-link {
+      background: #28a745;
+    }
+    .nav-links a.chat-link:hover {
+      background: #218838;
+    }
     #trade-list {
       margin-top: 20px;
     }
@@ -75,6 +81,7 @@
   
   <div class="nav-links">
     <a href="create_trade.html">Create a Trade</a>
+    <a href="chats.html" class="chat-link">💬 My Chats</a>
     <a href="#" onclick="loadTrades(); return false;">Refresh</a>
     <span id="user-info" style="float: right; color: #666;"></span>
   </div>
@@ -83,6 +90,7 @@
     <p class="loading">Loading trades...</p>
   </div>
 
+  <script src="assets/js/notification-system.js"></script>
   <script>
     const API_BASE = 'http://localhost:8000';
 
@@ -108,6 +116,7 @@
       if (confirm('Are you sure you want to logout?')) {
         localStorage.removeItem('user_id');
         localStorage.removeItem('username');
+        localStorage.removeItem('wallets');
         window.location.href = 'login.html';
       }
     }
@@ -159,8 +168,8 @@
     // Load trades when page loads
     loadTrades();
     
-    // Optional: Auto-refresh every 5 seconds
-    // setInterval(loadTrades, 5000);
+    // Optional: Auto-refresh every 30 seconds
+    setInterval(loadTrades, 30000);
   </script>
 </body>
 </html>
