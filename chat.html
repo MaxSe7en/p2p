@@ -120,8 +120,10 @@
     <h1>Trade Chat</h1>
 
     <div class="nav-links">
-      <a href="#" onclick="goBackToTrade(); return false;">← Back to Trade Details</a>
-      <span id="user-info" style="float: right; color: #666;"></span>
+      <a href="#" onclick="goBackToTrade(); return false;"
+        >← Back to Trade Details</a
+      >
+      <span id="user-info" style="float: right; color: #666"></span>
     </div>
 
     <div id="connection-status" class="connection-status connecting">
@@ -144,6 +146,230 @@
     </form>
 
     <script>
+      const WS_URL = "ws://localhost:8080";
+      const API_BASE = "http://localhost:8000";
+      const urlParams = new URLSearchParams(window.location.search);
+      const tradeId = urlParams.get("trade");
+
+      let ws = null;
+      let userId = null;
+      let username = null;
+      let isJoined = false;
+
+      const chatBox = document.getElementById("chat-box");
+      const form = document.getElementById("chat-form");
+      const input = document.getElementById("message");
+      const statusDiv = document.getElementById("connection-status");
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      userId = localStorage.getItem("user_id");
+      username = localStorage.getItem("username");
+
+      if (!userId) {
+        window.location.href = "login.html";
+      }
+
+      const userInfo = document.getElementById("user-info");
+      if (userInfo && username) {
+        userInfo.innerHTML = `Logged in as: <strong>${username}</strong>`;
+      }
+
+      if (!tradeId) {
+        document.body.innerHTML =
+          '<h1>Error: No trade ID provided</h1><a href="index.html">Go back</a>';
+      }
+
+      function updateStatus(status, message) {
+        statusDiv.className = `connection-status ${status}`;
+        statusDiv.textContent = message;
+      }
+
+      function connectWebSocket() {
+        updateStatus("connecting", "Connecting to chat server...");
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+          updateStatus("connected", "Connected - Joining chat...");
+          console.log("WebSocket connected");
+          joinChat();
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleMessage(data);
+          } catch (error) {
+            console.error("Error parsing message:", error);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+          updateStatus("disconnected", "Connection error");
+        };
+
+        ws.onclose = () => {
+          updateStatus("disconnected", "Disconnected from chat server");
+          console.log("WebSocket disconnected");
+          isJoined = false;
+          input.disabled = true;
+          submitBtn.disabled = true;
+
+          setTimeout(() => {
+            if (!isJoined) {
+              addSystemMessage("Attempting to reconnect...");
+              connectWebSocket();
+            }
+          }, 3000);
+        };
+      }
+
+      function joinChat() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          console.error("WebSocket not ready");
+          return;
+        }
+
+        ws.send(
+          JSON.stringify({
+            action: "join",
+            trade_id: parseInt(tradeId),
+            sender_id: parseInt(userId),
+          })
+        );
+
+        console.log(`Joining chat for Trade #${tradeId} as user ${userId}`);
+      }
+
+      function handleMessage(data) {
+        console.log("Received:", data);
+
+        if (data.action === "joined") {
+          isJoined = true;
+          form.style.display = "flex";
+          input.disabled = false;
+          submitBtn.disabled = false;
+          input.focus();
+          updateStatus("connected", `Connected to Trade #${tradeId} chat`);
+          addSystemMessage(`You joined the chat for Trade #${tradeId}`);
+          loadPreviousMessages();
+          return;
+        }
+
+        if (data.action === "left") {
+          addSystemMessage("You left the chat");
+          form.style.display = "none";
+          return;
+        }
+
+        if (data.action === "message" && data.trade_id == tradeId) {
+          const isMe = data.sender_id == userId;
+          addMessage(data.sender_name, data.message, data.created_at, isMe);
+        }
+
+        if (data.error) {
+          addSystemMessage(`Error: ${data.error}`);
+        }
+      }
+
+      function addMessage(sender, message, timestamp, isMe) {
+        const div = document.createElement("div");
+        div.className = `msg ${isMe ? "me" : "other"}`;
+        div.innerHTML = `
+          <div class="msg-sender">${sender}</div>
+          <div class="msg-text">${escapeHtml(message)}</div>
+          <div class="msg-time">${timestamp}</div>
+        `;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      function addSystemMessage(message) {
+        const div = document.createElement("div");
+        div.className = "system-message";
+        div.textContent = message;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          addSystemMessage("Not connected to chat server");
+          return;
+        }
+
+        ws.send(
+          JSON.stringify({
+            action: "message",
+            message: msg,
+          })
+        );
+
+        input.value = "";
+      });
+
+      function goBackToTrade() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              action: "leave",
+              trade_id: parseInt(tradeId),
+            })
+          );
+          ws.close();
+        }
+        window.location.href = `trade.html?trade=${tradeId}`;
+      }
+
+      async function loadPreviousMessages() {
+        try {
+          const response = await fetch(
+            `${API_BASE}/trades/${tradeId}/messages`
+          );
+
+          if (!response.ok) {
+            console.log("No previous messages endpoint available");
+            return;
+          }
+
+          const result = await response.json();
+
+          if (!result.success) {
+            console.log("Could not load previous messages");
+            return;
+          }
+
+          const messages = result.data;
+
+          if (messages.length === 0) {
+            addSystemMessage("No previous messages");
+          } else {
+            chatBox.innerHTML = "";
+            messages.forEach((msg) => {
+              const isMe = msg.sender_id == userId;
+              addMessage(msg.sender_name, msg.message, msg.created_at, isMe);
+            });
+          }
+        } catch (error) {
+          console.error("Error loading previous messages:", error);
+        }
+      }
+
+      connectWebSocket();
+    </script>
+
+    <!-- <script>
       const WS_URL = "ws://localhost:8080";
       const API_BASE = "http://localhost:8000";
       const urlParams = new URLSearchParams(window.location.search);
@@ -370,6 +596,6 @@
 
       // Connect on page load
       connectWebSocket();
-    </script>
+    </script> -->
   </body>
 </html>

@@ -131,6 +131,80 @@
       const result = document.getElementById("result");
       const submitBtn = document.getElementById("submit-btn");
 
+      const userId = localStorage.getItem("user_id");
+      const username = localStorage.getItem("username");
+
+      if (!userId) {
+        window.location.href = "login.html";
+      }
+
+      const userInfo = document.getElementById("user-info");
+      if (userInfo && username) {
+        userInfo.innerHTML = `Logged in as: <strong>${username}</strong>`;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const data = {
+          seller_id: parseInt(userId),
+          asset: formData.get("asset"),
+          amount: parseFloat(formData.get("amount")),
+        };
+
+        if (!data.seller_id || !data.asset || !data.amount) {
+          showResult("Please fill in all fields", "error");
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Creating...";
+        result.innerHTML = "";
+
+        try {
+          const response = await fetch(`${API_BASE}/trades`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          });
+
+          const responseData = await response.json();
+
+          if (!responseData.success) {
+            throw new Error(responseData.message || "Failed to create trade");
+          }
+
+          const tradeData = responseData.data;
+          showResult(
+            `${responseData.message} Trade ID: ${tradeData.id}. <a href="trade.html?trade=${tradeData.id}">View Trade</a>`,
+            "success"
+          );
+
+          form.reset();
+        } catch (error) {
+          console.error("Error creating trade:", error);
+          showResult(`Error: ${error.message}`, "error");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Create Trade";
+        }
+      });
+
+      function showResult(message, type) {
+        result.innerHTML = message;
+        result.className = type;
+        result.style.display = "block";
+      }
+    </script>
+    <!-- <script>
+      const API_BASE = "http://localhost:8000";
+      const form = document.getElementById("create-trade-form");
+      const result = document.getElementById("result");
+      const submitBtn = document.getElementById("submit-btn");
+
       // Check if user is logged in
       const userId = localStorage.getItem("user_id");
       const username = localStorage.getItem("username");
@@ -209,6 +283,6 @@
         result.className = type;
         result.style.display = "block";
       }
-    </script>
+    </script> -->
   </body>
 </html>

@@ -1,134 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Chats - P2P Escrow</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    h1 {
-      color: #333;
-    }
-    .nav-links {
-      margin: 20px 0;
-    }
-    .nav-links a {
-      display: inline-block;
-      padding: 10px 20px;
-      background: #007bff;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-      margin-right: 10px;
-    }
-    .nav-links a:hover {
-      background: #0056b3;
-    }
-    #chat-list {
-      margin-top: 20px;
-    }
-    .chat-item {
-      padding: 15px;
-      border: 1px solid #ddd;
-      margin: 10px 0;
-      border-radius: 5px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .chat-item:hover {
-      background: #f8f9fa;
-      border-color: #007bff;
-      transform: translateY(-2px);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .chat-info {
-      flex: 1;
-    }
-    .chat-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-    .trade-id {
-      font-weight: bold;
-      color: #007bff;
-      font-size: 16px;
-    }
-    .status {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 3px;
-      font-size: 11px;
-      font-weight: bold;
-    }
-    .status.open { background: #28a745; color: white; }
-    .status.in_progress { background: #ffc107; color: black; }
-    .status.completed { background: #6c757d; color: white; }
-    .status.cancelled { background: #dc3545; color: white; }
-    .chat-details {
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 5px;
-    }
-    .chat-meta {
-      display: flex;
-      gap: 15px;
-      font-size: 12px;
-      color: #999;
-    }
-    .message-count {
-      color: #007bff;
-      font-weight: 500;
-    }
-    .error {
-      color: red;
-      padding: 15px;
-      background: #fee;
-      border-radius: 5px;
-      border: 1px solid #fcc;
-    }
-    .loading {
-      text-align: center;
-      color: #666;
-      padding: 40px;
-      font-style: italic;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #999;
-    }
-    .empty-state-icon {
-      font-size: 64px;
-      margin-bottom: 20px;
-    }
-  </style>
-</head>
-<body>
-  <h1>My Chats</h1>
-  
-  <div class="nav-links">
-    <a href="index.html">← Back to Trades</a>
-    <a href="#" onclick="loadChats(); return false;">Refresh</a>
-    <span id="user-info" style="float: right; color: #666;"></span>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Chats - P2P Escrow</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      .nav-links {
+        margin: 20px 0;
+      }
+      .nav-links a {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-right: 10px;
+      }
+      .nav-links a:hover {
+        background: #0056b3;
+      }
+      #chat-list {
+        margin-top: 20px;
+      }
+      .chat-item {
+        padding: 15px;
+        border: 1px solid #ddd;
+        margin: 10px 0;
+        border-radius: 5px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .chat-item:hover {
+        background: #f8f9fa;
+        border-color: #007bff;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .chat-info {
+        flex: 1;
+      }
+      .chat-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .trade-id {
+        font-weight: bold;
+        color: #007bff;
+        font-size: 16px;
+      }
+      .status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+      }
+      .status.open {
+        background: #28a745;
+        color: white;
+      }
+      .status.in_progress {
+        background: #ffc107;
+        color: black;
+      }
+      .status.completed {
+        background: #6c757d;
+        color: white;
+      }
+      .status.cancelled {
+        background: #dc3545;
+        color: white;
+      }
+      .chat-details {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 5px;
+      }
+      .chat-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 12px;
+        color: #999;
+      }
+      .message-count {
+        color: #007bff;
+        font-weight: 500;
+      }
+      .error {
+        color: red;
+        padding: 15px;
+        background: #fee;
+        border-radius: 5px;
+        border: 1px solid #fcc;
+      }
+      .loading {
+        text-align: center;
+        color: #666;
+        padding: 40px;
+        font-style: italic;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+      }
+      .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>My Chats</h1>
 
-  <div id="chat-list">
-    <div class="loading">Loading your chats...</div>
-  </div>
+    <div class="nav-links">
+      <a href="index.html">← Back to Trades</a>
+      <a href="#" onclick="loadChats(); return false;">Refresh</a>
+      <span id="user-info" style="float: right; color: #666"></span>
+    </div>
 
-  <script src="assets/js/notification-system.js"></script>
-  <script>
+    <div id="chat-list">
+      <div class="loading">Loading your chats...</div>
+    </div>
+
+    <script src="assets/js/notification-system.js"></script>
+    <script>
+      const API_BASE = "http://localhost:8000";
+
+      const userId = localStorage.getItem("user_id");
+      const username = localStorage.getItem("username");
+
+      if (!userId) {
+        window.location.href = "login.html";
+      }
+
+      const userInfo = document.getElementById("user-info");
+      if (userInfo && username) {
+        userInfo.innerHTML = `
+    Logged in as: <strong>${username}</strong> | 
+    <a href="#" onclick="logout(); return false;" style="color: #dc3545;">Logout</a>
+  `;
+      }
+
+      function logout() {
+        if (confirm("Are you sure you want to logout?")) {
+          localStorage.removeItem("user_id");
+          localStorage.removeItem("username");
+          window.location.href = "login.html";
+        }
+      }
+
+      async function loadChats() {
+        const container = document.getElementById("chat-list");
+        container.innerHTML =
+          '<div class="loading">Loading your chats...</div>';
+
+        try {
+          const response = await fetch(
+            `${API_BASE}/trades/user/${userId}/chats`
+          );
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(result.message || "Failed to load chats");
+          }
+
+          const chats = result.data;
+
+          if (chats.length === 0) {
+            container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">💬</div>
+          <h2>No chats yet</h2>
+          <p>Start trading to begin conversations with other users</p>
+          <a href="index.html" style="color: #007bff; text-decoration: none;">Browse Trades →</a>
+        </div>
+      `;
+            return;
+          }
+
+          container.innerHTML = chats
+            .map((chat) => {
+              const timeAgo = formatTimeAgo(chat.last_message_at);
+
+              return `
+        <div class="chat-item" onclick="openChat(${chat.id})">
+          <div class="chat-info">
+            <div class="chat-header">
+              <span class="trade-id">Trade #${chat.id}</span>
+              <span class="status ${
+                chat.status
+              }">${chat.status.toUpperCase()}</span>
+            </div>
+            <div class="chat-details">
+              <strong>${chat.asset}:</strong> ${chat.amount} | 
+              <strong>With:</strong> ${chat.counterparty_name || "Unknown"}
+            </div>
+            <div class="chat-meta">
+              <span class="message-count">${chat.message_count} message${
+                chat.message_count !== 1 ? "s" : ""
+              }</span>
+              <span>Last activity: ${timeAgo}</span>
+            </div>
+          </div>
+        </div>
+      `;
+            })
+            .join("");
+        } catch (error) {
+          console.error("Error loading chats:", error);
+          container.innerHTML = `
+      <div class="error">
+        <strong>Error loading chats:</strong> ${error.message}
+        <br><br>
+        Make sure your backend server is running on ${API_BASE}
+      </div>
+    `;
+        }
+      }
+
+      function openChat(tradeId) {
+        window.location.href = `chat.html?trade=${tradeId}`;
+      }
+
+      function formatTimeAgo(timestamp) {
+        if (!timestamp) return "Never";
+
+        const now = new Date();
+        const then = new Date(timestamp);
+        const seconds = Math.floor((now - then) / 1000);
+
+        if (seconds < 60) return "Just now";
+        if (seconds < 3600) return Math.floor(seconds / 60) + "m ago";
+        if (seconds < 86400) return Math.floor(seconds / 3600) + "h ago";
+        if (seconds < 604800) return Math.floor(seconds / 86400) + "d ago";
+
+        return then.toLocaleDateString();
+      }
+
+      loadChats();
+    </script>
+    <!-- <script>
     const API_BASE = 'http://localhost:8000';
 
     // Check if user is logged in
@@ -237,6 +365,6 @@
     
     // Load chats when page loads
     loadChats();
-  </script>
-</body>
+  </script> -->
+  </body>
 </html>
